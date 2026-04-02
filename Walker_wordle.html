@@ -1,0 +1,461 @@
+<html>
+<head>
+<title>Ash's Wordle Game</title>
+<style type="text/css">
+body {
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #121213;
+    color: #fff;
+}
+h1 {
+    font-size: 2.5vw;
+    letter-spacing: 4px;
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+#message {
+    font-size: 1.2rem;
+    font-weight: bold;
+    height: 30px;
+    margin: 5px auto;
+}
+#board {
+    margin: 5px auto;
+    display: inline-block;
+}
+.row {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 5px;
+}
+.tile {
+    width: 58px;
+    height: 58px;
+    border: 2px solid #3a3a3c;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.green {
+    background-color: #538d4e;
+    border-color: #538d4e;
+}
+.yellow {
+    background-color: #b59f3b;
+    border-color: #b59f3b;
+}
+.grey {
+    background-color: #3a3a3c;
+    border-color: #3a3a3c;
+}
+#guessInput {
+    padding: 10px;
+    font-size: 16px;
+    width: 180px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    border: 2px solid #565758;
+    border-radius: 4px;
+    background-color: #121213;
+    color: #fff;
+}
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    border: none;
+    background-color: #538d4e;
+    color: #fff;
+    font-weight: bold;
+    margin-left: 8px;
+}
+#newGameBtn {
+    background-color: #b59f3b;
+    margin-top: 15px;
+    display: none;
+}
+#keyboard {
+    margin: 20px auto;
+    max-width: 500px;
+}
+.kbrow {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+.key {
+    width: 34px;
+    height: 44px;
+    border-radius: 4px;
+    background-color: #818384;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.key.green {
+    background-color: #538d4e;
+}
+.key.yellow {
+    background-color: #b59f3b;
+}
+.key.grey {
+    background-color: #3a3a3c;
+}
+#stats {
+    margin-top: 15px;
+    font-size: 0.85rem;
+    color: #818384;
+}
+@media (max-width: 700px) {
+    h1 {
+        font-size: 5vw;
+    }
+    .tile {
+        width: 46px;
+        height: 46px;
+        font-size: 1.3rem;
+    }
+}
+</style>
+</head>
+<body>
+
+<h1>Play Wordle!</h1>
+<div id="message">&nbsp;</div>
+<div id="board"></div>
+<div>
+    <input type="text" id="guessInput" maxlength="5" placeholder="GUESS">
+    <button id="guessBtn">Enter</button>
+</div>
+<button id="newGameBtn">New Game</button>
+<div id="keyboard"></div>
+<div id="stats"></div>
+
+<script>
+
+// game variables
+var NUM_ROWS = 6
+var NUM_COLS = 5
+var answer = ""
+var currentRow = 0
+var gameOver = false
+var wins = 0
+var losses = 0
+
+
+// Tile - each box on the board
+function Tile(row, col)
+{
+    this.row = row
+    this.col = col
+    this.letter = ""
+    this.id = "tile" + row + col
+    this.setLetter = setLetter
+    this.setColor = setColor
+    this.reset = resetTile
+}
+
+function setLetter(letter)
+{
+    this.letter = letter
+    document.getElementById(this.id).innerHTML = letter
+}
+function setColor(color)
+{
+    document.getElementById(this.id).classList.add(color)
+}
+
+function resetTile()
+{
+    this.letter = ""
+    el = document.getElementById(this.id)
+    el.innerHTML = ""
+    el.className = "tile"
+}
+
+
+// Board - holds all the tiles
+function Board()
+{
+    this.tiles = []
+    this.build = buildBoard
+}
+
+// draw the board on the page
+function buildBoard()
+{
+    s = ""
+    for (r=0; r<NUM_ROWS; r++)
+    {
+        this.tiles[r] = []
+        s += "<div class='row'>"
+        for (c=0; c<NUM_COLS; c++)
+        {
+            this.tiles[r][c] = new Tile(r, c)
+            s += "<div class='tile' id='tile" + r + c + "'></div>"
+        }
+        s += "</div>"
+    }
+    document.getElementById("board").innerHTML = s
+}
+
+
+// Keyboard - shows which letters have been used
+function Letters()
+{
+    this.keys = {}
+    this.build = buildKeys
+    this.update = updateKey
+}
+// draw the letter keys on the page
+function buildKeys()
+{
+    row1 = "QWERTYUIOP"
+    row2 = "ASDFGHJKL"
+    row3 = "ZXCVBNM"
+    rows = [row1, row2, row3]
+
+    s = ""
+    for (r=0; r<rows.length; r++)
+    {
+        s += "<div class='kbrow'>"
+        for (c=0; c<rows[r].length; c++)
+        {
+            letter = rows[r].charAt(c)
+            this.keys[letter] = ""
+            s += "<div class='key' id='key" + letter + "'>" + letter + "</div>"
+        }
+        s += "</div>"
+    }
+    document.getElementById("keyboard").innerHTML = s
+}
+
+// update one key color
+function updateKey(letter, color)
+{
+    letter = letter.toUpperCase()
+
+    // dont change green to anything else
+    if (this.keys[letter] == "green")
+        return
+    // dont change yellow to grey
+    if (this.keys[letter] == "yellow" && color == "grey")
+        return
+
+    this.keys[letter] = color
+    document.getElementById("key" + letter).className = "key " + color
+}
+
+
+// Game - controls everything
+function Game(board, keyboard)
+{
+    this.board = board
+    this.keyboard = keyboard
+    this.start = startGame
+    this.submitGuess = submitGuess
+    this.checkWord = checkWord
+    this.getWord = getWord
+}
+
+// start or restart the game
+function startGame()
+{
+    currentRow = 0
+    gameOver = false
+    answer = ""
+
+    // clear all the tiles
+    for (r=0; r<NUM_ROWS; r++)
+        for (c=0; c<NUM_COLS; c++)
+            this.board.tiles[r][c].reset()
+
+    // clear all the keyboard keys
+    for (key in this.keyboard.keys)
+    {
+        this.keyboard.keys[key] = ""
+        document.getElementById("key" + key).className = "key"
+    }
+    document.getElementById("message").innerHTML = "&nbsp;"
+    document.getElementById("guessInput").value = ""
+    document.getElementById("guessInput").disabled = false
+    document.getElementById("guessBtn").disabled = false
+    document.getElementById("newGameBtn").style.display = "none"
+    document.getElementById("stats").innerHTML = ""
+
+    // get random word from api
+    this.getWord()
+}
+
+// get random word from api
+function getWord()
+{
+    fetch("https://random-word-api.herokuapp.com/word?length=5")
+        .then(res => res.json())
+        .then(data => {
+            answer = data[0].toUpperCase()
+            console.log("DEBUG answer is: " + answer)
+        })
+        .catch(err => {
+            console.log("api error " + err)
+            answer = "CRANE"
+            console.log("DEBUG using backup word: " + answer)
+        })
+}
+
+
+// when user hits enter
+function submitGuess(guess)
+{
+    if (gameOver)
+        return
+
+    guess = guess.toUpperCase().trim()
+
+    // make sure its 5 letters
+    if (guess.length != 5)
+    {
+        document.getElementById("message").innerHTML = "Must be 5 letters!"
+        return
+    }
+    // make sure its only letters
+    for (i=0; i<guess.length; i++)
+    {
+        ch = guess.charCodeAt(i)
+        if (ch < 65 || ch > 90)
+        {
+            document.getElementById("message").innerHTML = "Letters only!"
+            return
+        }
+    }
+
+    document.getElementById("message").innerHTML = "&nbsp;"
+    this.checkWord(guess)
+}
+
+// check each letter and color the board
+function checkWord(guess)
+{
+    guessArr = guess.split("")
+    answerArr = answer.split("")
+    results = ["grey", "grey", "grey", "grey", "grey"]
+    used = [false, false, false, false, false]
+
+    // first check for green (right letter right spot)
+    for (i=0; i<NUM_COLS; i++)
+    {
+        if (guessArr[i] == answerArr[i])
+        {
+            results[i] = "green"
+            used[i] = true
+        }
+    }
+
+    // then check for yellow (right letter wrong spot)
+    // have to skip ones already marked green
+    for (i=0; i<NUM_COLS; i++)
+    {
+        if (results[i] == "green")
+            continue
+
+        for (j=0; j<NUM_COLS; j++)
+        {
+            if (used[j] == false && guessArr[i] == answerArr[j])
+            {
+                results[i] = "yellow"
+                used[j] = true
+                break
+            }
+        }
+    }
+
+    // show result on board and update keyboard
+    for (i=0; i<NUM_COLS; i++)
+    {
+        this.board.tiles[currentRow][i].setLetter(guessArr[i])
+        this.board.tiles[currentRow][i].setColor(results[i])
+        this.keyboard.update(guessArr[i], results[i])
+    }
+
+    // check if they got it right
+    if (guess == answer)
+    {
+        gameOver = true
+        wins++
+        document.getElementById("message").innerHTML = "You got it!"
+        document.getElementById("newGameBtn").style.display = "inline-block"
+        document.getElementById("guessInput").disabled = true
+        document.getElementById("guessBtn").disabled = true
+        total = wins + losses
+        document.getElementById("stats").innerHTML = "Games: " + total + " | Wins: " + wins + " | Losses: " + losses
+        return
+    }
+
+    currentRow++
+    // check if they used all their guesses
+    if (currentRow >= NUM_ROWS)
+    {
+        gameOver = true
+        losses++
+        document.getElementById("message").innerHTML = "Game over! The word was " + answer
+        document.getElementById("newGameBtn").style.display = "inline-block"
+        document.getElementById("guessInput").disabled = true
+        document.getElementById("guessBtn").disabled = true
+        total = wins + losses
+        document.getElementById("stats").innerHTML = "Games: " + total + " | Wins: " + wins + " | Losses: " + losses
+        return
+    }
+
+    document.getElementById("guessInput").value = ""
+    document.getElementById("guessInput").focus()
+}
+
+// create everything and start the game
+board = new Board()
+keyboard = new Letters()
+game = new Game(board, keyboard)
+
+board.build()
+keyboard.build()
+game.start()
+
+// button and input events
+window.onload = function()
+{
+    document.getElementById("guessBtn").onclick = function()
+    {
+        guess = document.getElementById("guessInput").value
+        game.submitGuess(guess)
+    }
+
+    document.getElementById("guessInput").onkeyup = function(e)
+    {
+        if (e.key == "Enter")
+        {
+            guess = document.getElementById("guessInput").value
+            game.submitGuess(guess)
+        }
+    }
+    document.getElementById("newGameBtn").onclick = function()
+    {
+        game.start()
+    }
+}
+
+</script>
+
+</body>
+</html>
